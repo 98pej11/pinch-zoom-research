@@ -7,13 +7,12 @@ export default function App() {
   const [painting, setPainting] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false); // 추가: 지우개 모드 상태
 
-
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
     // 캔버스 크기 설정
-    canvas.width = 500;
+    canvas.width = 300;
     canvas.height = 500;
 
     // 배경색 설정
@@ -31,6 +30,8 @@ export default function App() {
 
     // 핀치 줌 처리
     const handlePinch = (e) => {
+      // 필기 중지
+      setPainting(false);
       if (e.touches.length >= 2) {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
@@ -42,7 +43,10 @@ export default function App() {
 
         if (initialPinchDistance === 0) {
           initialPinchDistance = distance;
-          initialScale = getCtx.getTransform().a;
+          initialScale =
+            parseFloat(
+              canvas.style.transform.replace("scale(", "").replace(")", "")
+            ) || 1;
         }
 
         const scaleFactor = (distance / initialPinchDistance) * initialScale;
@@ -54,21 +58,17 @@ export default function App() {
         canvas.style.touchAction = "none";
       }
     };
-
-    // 캔버스에 핀치 줌 이벤트 리스너 추가
-    canvas.addEventListener("touchmove", handlePinch, { passive: false });
-
     return () => {
-      // 이벤트 리스너 정리
+      // Clean up event listeners
       canvas.removeEventListener("touchmove", handlePinch);
+      canvas.removeEventListener("touchstart", startDrawing);
+      canvas.removeEventListener("touchend", handleMouseUp);
     };
   }, [getCtx]);
-
 
   const toggleEraserMode = () => {
     setIsEraserMode(!isEraserMode);
   };
-
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -80,17 +80,23 @@ export default function App() {
 
   const getPenColor = () => {
     // 지우개 모드일 때는 배경색과 같은 회색으로 설정
-    return isEraserMode ?"#EEEEEE" : "#000000"; // 펜 색상을 조절
+    return isEraserMode ? "#EEEEEE" : "#000000"; // 펜 색상을 조절
   };
 
   const startDrawing = (e) => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    const clientX = e.clientX || e.touches[0].clientX;
-    const clientY = e.clientY || e.touches[0].clientY;
+    // Calculate the canvas's position and offset within the page
+    const canvasRect = canvas.getBoundingClientRect();
+    const offsetX = canvasRect.left;
+    const offsetY = canvasRect.top;
 
-    ctx.beginPath(); // 새로운 경로 시작
+    // Adjust the client coordinates based on the canvas position
+    const clientX = (e.clientX || e.touches[0].clientX) - offsetX;
+    const clientY = (e.clientY || e.touches[0].clientY) - offsetY;
+
+    ctx.beginPath();
     ctx.moveTo(clientX, clientY);
     setPainting(true);
 
@@ -105,13 +111,19 @@ export default function App() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
-    e.preventDefault();
-    if (painting) {
-      const clientX = e.clientX || e.touches[0].clientX;
-      const clientY = e.clientY || e.touches[0].clientY;
+    // Calculate the canvas's position and offset within the page
+    const canvasRect = canvas.getBoundingClientRect();
+    const offsetX = canvasRect.left;
+    const offsetY = canvasRect.top;
 
-      ctx.strokeStyle = getPenColor(); // 펜의 색상 설정
-    
+    e.preventDefault();
+
+    if (painting) {
+      // Adjust the client coordinates based on the canvas position
+      const clientX = (e.clientX || e.touches[0].clientX) - offsetX;
+      const clientY = (e.clientY || e.touches[0].clientY) - offsetY;
+
+      ctx.strokeStyle = getPenColor();
       ctx.lineTo(clientX, clientY);
       ctx.stroke();
     }
@@ -119,25 +131,25 @@ export default function App() {
 
   return (
     <S.NoteContainer>
-        <div>
-          <canvas
-            className="canvas"
-            style={{ margin: "3%", cursor: "pointer" }}
-            ref={canvasRef}
-            onMouseDown={startDrawing}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            onTouchStart={startDrawing}
-            onTouchEnd={handleMouseUp}
-            onTouchMove={handleMouseMove}
-          ></canvas>
-        </div>
-      
+      <div>
+        <canvas
+          className="canvas"
+          style={{ margin: "3%", cursor: "pointer" }}
+          ref={canvasRef}
+          onMouseDown={startDrawing}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+          onTouchStart={startDrawing}
+          onTouchEnd={handleMouseUp}
+          onTouchMove={handleMouseMove}
+        ></canvas>
+      </div>
+
       <S.ButtonBox>
-      <button onClick={toggleEraserMode}>
-        {isEraserMode ? "필기 모드 전환" : "지우개 모드 전환"}
-      </button>
-      <button onClick={clearCanvas}>전체 지우기</button>
+        <button onClick={toggleEraserMode}>
+          {isEraserMode ? "필기 모드 전환" : "지우개 모드 전환"}
+        </button>
+        <button onClick={clearCanvas}>전체 지우기</button>
       </S.ButtonBox>
     </S.NoteContainer>
   );
