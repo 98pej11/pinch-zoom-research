@@ -6,6 +6,8 @@ export default function App() {
   const [ctx, setCtx] = useState(null);
   const [painting, setPainting] = useState(false);
   const [isEraserMode, setIsEraserMode] = useState(false);
+
+  // eslint-disable-next-line no-unused-vars
   const [scaleFactor, setScaleFactor] = useState(1);
 
   useEffect(() => {
@@ -140,8 +142,6 @@ export default function App() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#EEEEEE";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
 
   return (
